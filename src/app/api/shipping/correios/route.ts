@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calcRotulosPackage } from "@/lib/shipping-rotulos";
-import { getCorreiosToken } from "@/lib/correios-token";
 
 const CORREIOS_SOAP_URL_HTTPS = "https://ws.correios.com.br/calculador/CalcPrecoPrazo.asmx";
 const CORREIOS_SOAP_URL_HTTP = "http://ws.correios.com.br/calculador/CalcPrecoPrazo.asmx";
@@ -17,92 +16,7 @@ function parseCorreiosValor(str: string): number {
     return Math.max(0, parseFloat(normalized) || 0);
 }
 
-function getPrecoBaseUrl(): string {
-    const tokenUrl = process.env.CORREIOS_TOKEN_URL?.replace(/\/$/, "") || "";
-    if (tokenUrl.includes("apihom")) return "https://apihom.correios.com.br/preco/v1";
-    if (tokenUrl.includes("api.correios")) return "https://api.correios.com.br/preco/v1";
-    return process.env.CORREIOS_PRECO_URL || "https://apihom.correios.com.br/preco/v1";
-}
 
-/**
- * API Preço REST: disponível somente para clientes com contrato dos Correios na modalidade "a faturar".
- * Se retornar 403, o usuário não tem permissão (API 34); usar fallback SOAP.
- * Rate limit: 150 req/s por usuário e IP.
- */
-async function fetchPrecoREST(
-    cepOrigem: string,
-    cepDestino: string,
-    psObjetoGramas: number,
-    comprimento: string,
-    largura: string,
-    altura: string
-): Promise<{ valor: number; prazoDias?: number } | null> {
-    const token = await getCorreiosToken();
-    if (!token) return null;
-    const base = getPrecoBaseUrl();
-    const coProduto = PAC_CODIGO_SERVICO;
-    const params = new URLSearchParams({
-        cepOrigem,
-        cepDestino,
-        psObjeto: String(Math.round(psObjetoGramas)),
-        tpObjeto: "2",
-        comprimento,
-        largura,
-        altura,
-    });
-    const url = `${base}/nacional/${coProduto}?${params.toString()}`;
-    try {
-        const res = await fetch(url, {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: "application/json",
-                "Content-Type": "application/json",
-            },
-            signal: AbortSignal?.timeout?.(15000),
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            if (res.status === 403) {
-                console.warn("[Correios Preço REST] 403 - Acesso à API Preço (34) não autorizado. Solicite a permissão no portal Meu Correios / Desenvolvedores e tente novamente.");
-            } else {
-                console.warn("[Correios Preço REST] HTTP", res.status, text?.slice(0, 300));
-            }
-            return null;
-        }
-        const data = (await res.json()) as Record<string, unknown>;
-        const valor =
-            typeof data.vlPreco === "number"
-                ? data.vlPreco
-                : typeof data.vlPreco === "string"
-                  ? parseCorreiosValor(data.vlPreco)
-                  : typeof data.preco === "number"
-                    ? data.preco
-                    : typeof data.valor === "number"
-                      ? data.valor
-                      : Array.isArray(data.parametrosProduto)?.[0]
-                        ? (() => {
-                              const p = data.parametrosProduto[0] as Record<string, unknown>;
-                              const v = p.vlPreco ?? p.preco ?? p.valor;
-                              return typeof v === "number" ? v : parseCorreiosValor(String(v ?? "0"));
-                          })()
-                        : 0;
-        const prazo =
-            typeof data.prazoEntrega === "number"
-                ? data.prazoEntrega
-                : typeof data.prazoEntrega === "string"
-                  ? parseInt(data.prazoEntrega, 10)
-                  : undefined;
-        if (valor <= 0) {
-            console.warn("[Correios Preço REST] Valor não encontrado na resposta:", JSON.stringify(data).slice(0, 400));
-            return null;
-        }
-        return { valor, prazoDias: prazo && !isNaN(prazo) ? prazo : undefined };
-    } catch (e): any {
-        console.warn("[Correios Preço REST] Erro:", e instanceof Error ? e.message : e);
-        return null;
-    }
-}
 
 type ShippingBody = {
     cepDestino?: string;
@@ -170,18 +84,9 @@ export async function POST(request: NextRequest) {
 
         const psObjetoGramas = Math.round(parseFloat(pesoKg.replace(",", ".")) * 1000);
 
-        const restResult = await fetchPrecoREST(cepOrigem, cepDestino, psObjetoGramas, comprimento, largura, altura);
-        if (restResult != null) {
-            const valorComSpread = Math.round(restResult.valor * (1 + SPREAD_PERCENT / 100) * 100) / 100;
-            return NextResponse.json({
-                valor: restResult.valor,
-                valorComSpread,
-                prazoDias: restResult.prazoDias ?? 0,
                 spreadPercent: SPREAD_PERCENT,
                 origem: "rest",
             });
-        }
-
         const pesoKgSoap = pesoKg.replace(",", ".");
         const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
                 origem: "rest",
             });
         const pesoKgSoap = pesoKg.replace(",", ".");
-        const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+        const soapBody = `<?xml version="1.0" encoding="utf-8"?
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
   <soap:Body>
     <tem:CalcPrecoPrazo>

@@ -1,90 +1,45 @@
-# F9 Mktplace
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Webapp Next.js para marketplace da F9 Comunicação Visual.
+## Mercado Pago
 
-## Tecnologias
+Para habilitar o pagamento via Mercado Pago:
 
-- **Framework**: Next.js
-- **Runtime**: Node.js
-- **Linguagem**: TypeScript/JavaScript
-- **Banco de Dados**: Supabase
-- **Deployment**: Vercel
-- **Styling**: CSS/Tailwind CSS
+1. Copie `.env.example` para `.env.local`.
+2. Obtenha seu **Access Token** em [Mercado Pago Developers](https://www.mercadopago.com.br/developers/panel/app) (produção ou teste).
+3. Defina `MERCADO_PAGO_ACCESS_TOKEN` e `NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY` no `.env.local`.
+4. (Opcional) Defina `NEXT_PUBLIC_APP_URL` com a URL do app para os links de retorno do checkout (sucesso/falha/pendente).
 
-## Instalação
+## Getting Started
 
-### Pré-requisitos
-- Node.js 18+ instalado
-- npm ou yarn
+First, run the development server:
 
-### Setup Local
-
-1. Clone o repositório:
-```bash
-git clone https://github.com/ViniPenaAI/f9-mktplace.git
-cd f9-mktplace
-```
-
-2. Instale as dependências:
-```bash
-npm install
-```
-
-3. Configure as variáveis de ambiente:
-```bash
-cp .env.example .env.local
-# Edite .env.local com seus valores
-```
-
-4. Execute o servidor de desenvolvimento:
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Acesse http://localhost:3000
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Build para Produção
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```bash
-npm run build
-npm start
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Deployment no Vercel
+## Learn More
 
-1. Faça login em vercel.com
-2. Clique em "New Project"
-3. Selecione este repositório GitHub
-4. Configure as variáveis de ambiente no Vercel
-5. Faça o deploy
+To learn more about Next.js, take a look at the following resources:
 
-## Estrutura do Projeto
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-```
-f9-mktplace/
-├── app/              # Arquivos da aplicação Next.js
-├── public/           # Arquivos estáticos
-├── src/              # Código fonte
-├── .env.example      # Template de variáveis de ambiente
-├── .gitignore        # Arquivos ignorados no git
-├── package.json      # Dependências do projeto
-└── README.md         # Este arquivo
-```
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Variáveis de Ambiente
+## Deploy on Vercel
 
-Ver `.env.example` para a lista de variáveis necessárias.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-## Notas Importantes
-
-- Nunca commitar `.env.local` no repositório (ele está no .gitignore)
-- Nunca commitar a pasta `node_modules` (será instalada automaticamente)
-- Manter a pasta `.next/` no .gitignore para evitar conflitos
-
-## Suporte
-
-Para dúvidas ou problemas, abra uma issue no repositório.
-
----
-
-Desenvolvido com ❤️ por ViniPenaAI
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -95,7 +95,8 @@ async function buildEtiquetaPdf(pedido: PedidoRow): Promise<Uint8Array> {
     y += lineH;
     doc.text(`Código de barras: ${pedido.order_id_mp}`, margin, y);
 
-return doc.output("arraybuffer") as Uint8Array;}
+    return new Uint8Array(doc.output("arraybuffer") as ArrayBuffer);
+}
 
 /** Gera PDF do comprovante de pagamento. */
 async function buildComprovantePdf(pedido: PedidoRow): Promise<Uint8Array> {
@@ -126,7 +127,7 @@ async function buildComprovantePdf(pedido: PedidoRow): Promise<Uint8Array> {
         doc.text(lines, margin, y);
     }
 
-    return doc.output("arraybuffer") as Promise<Uint8Array>;
+    return new Uint8Array(doc.output("arraybuffer") as ArrayBuffer);
 }
 
 /** Gera PDF da arte final (imagem aprovada + área de corte). Se artBase64 não existir, gera PDF com aviso. */
@@ -153,7 +154,7 @@ async function buildArtePdf(
         doc.text("[Arte não enviada em base64; anexar manualmente a arte aprovada.]", margin, margin + 1);
     }
     doc.text(`Pedido: ${pedido.order_id_mp} | ${pedido.presentation_type || "cartela"}`, margin, doc.internal.pageSize.height - 0.5);
-    return doc.output("arraybuffer") as Promise<Uint8Array>;
+    return new Uint8Array(doc.output("arraybuffer") as ArrayBuffer);
 }
 
 /** Nome do arquivo da arte: PRODUTO_FORMATO_TAMANHO_QUANTIDADE_CARTELA ou UNIDADE_IDpedido.pdf */

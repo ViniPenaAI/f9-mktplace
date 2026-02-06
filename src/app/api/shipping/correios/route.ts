@@ -83,10 +83,6 @@ export async function POST(request: NextRequest) {
         }
 
         const psObjetoGramas = Math.round(parseFloat(pesoKg.replace(",", ".")) * 1000);
-
-                spreadPercent: SPREAD_PERCENT,
-                origem: "rest",
-            });
         const pesoKgSoap = pesoKg.replace(",", ".");
         const soapBody = `<?xml version="1.0" encoding="utf-8"?
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">

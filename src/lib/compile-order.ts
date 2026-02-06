@@ -95,7 +95,7 @@ async function buildEtiquetaPdf(pedido: PedidoRow): Promise<Uint8Array> {
     y += lineH;
     doc.text(`Código de barras: ${pedido.order_id_mp}`, margin, y);
 
-    return new Uint8Array(doc.output("arraybuffer") as ArrayBuffer);
+    return new Uint8Array doc.output("arraybuffer") as ArrayBuffer);
 }
 
 /** Gera PDF do comprovante de pagamento. */

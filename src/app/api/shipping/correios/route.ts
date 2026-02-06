@@ -98,7 +98,7 @@ async function fetchPrecoREST(
             return null;
         }
         return { valor, prazoDias: prazo && !isNaN(prazo) ? prazo : undefined };
-    } catch (e) {
+    } catch (e): any {
         console.warn("[Correios Preço REST] Erro:", e instanceof Error ? e.message : e);
         return null;
     }

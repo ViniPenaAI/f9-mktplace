@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { compileOrder } from "@/lib/compile-order";
 import type { OrderConfirmBody } from "@/lib/order-types";
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
     if (!supabaseAdmin) {
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
     const artBase64 = artwork?.artBase64;
 
     if (shouldCompile) {
+        const { compileOrder } = await import("@/lib/compile-order");
         const compileResult = await compileOrder(pedidoId, artBase64);
         if (!compileResult.ok) {
             return NextResponse.json(

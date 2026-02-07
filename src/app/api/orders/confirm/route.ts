@@ -122,11 +122,20 @@ export async function POST(request: NextRequest) {
     const artBase64 = artwork?.artBase64;
 
     if (shouldCompile) {
-        const { compileOrder } = await import("@/lib/compile-order");
-        const compileResult = await compileOrder(pedidoId, artBase64);
-        if (!compileResult.ok) {
+        try {
+            const { compileOrder } = await import("@/lib/compile-order");
+            const compileResult = await compileOrder(pedidoId, artBase64);
+            if (!compileResult.ok) {
+                console.error("[orders/confirm] Compilação falhou:", compileResult.error);
+                return NextResponse.json(
+                    { ok: true, pedido_id: pedidoId, compile_warning: compileResult.error },
+                    { status: 200 }
+                );
+            }
+        } catch (err) {
+            console.error("[orders/confirm] Erro ao compilar:", err);
             return NextResponse.json(
-                { ok: true, pedido_id: pedidoId, compile_warning: compileResult.error },
+                { ok: true, pedido_id: pedidoId, compile_warning: err instanceof Error ? err.message : "Erro ao compilar" },
                 { status: 200 }
             );
         }

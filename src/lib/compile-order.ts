@@ -210,14 +210,33 @@ export async function compileOrder(pedidoId: string, artBase64?: string): Promis
             { path: prefix + arteName, body: new Blob([artePdf as BlobPart], { type: "application/pdf" }) },
         ];
 
+        let bucketCreated = false;
         for (const u of uploads) {
-            const { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(u.path, u.body, {
+            let { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(u.path, u.body, {
                 contentType: u.body.type,
                 upsert: true,
             });
+            if (upErr && !bucketCreated) {
+                const msg = upErr?.message ?? String(upErr);
+                if (msg.includes("not found") || /bucket|Bucket/.test(msg)) {
+                    const { error: createErr } = await supabaseAdmin.storage.createBucket(BUCKET, { public: false });
+                    bucketCreated = true;
+                    if (!createErr || createErr.message?.toLowerCase().includes("already")) {
+                        const retry = await supabaseAdmin.storage.from(BUCKET).upload(u.path, u.body, {
+                            contentType: u.body.type,
+                            upsert: true,
+                        });
+                        upErr = retry.error;
+                    }
+                }
+            }
             if (upErr) {
-                console.error("[compile-order] Upload falhou:", u.path, upErr);
-                return { ok: false, error: `Upload falhou: ${u.path}` };
+                const msg = upErr?.message ?? String(upErr);
+                console.error("[compile-order] Upload falhou:", u.path, msg);
+                return {
+                    ok: false,
+                    error: `Upload falhou (${u.path}): ${msg}. Crie o bucket "${BUCKET}" no Supabase (Storage) se ainda não existir.`,
+                };
             }
         }
 

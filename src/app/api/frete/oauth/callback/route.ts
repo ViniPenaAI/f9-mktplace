@@ -68,11 +68,19 @@ export async function GET(request: NextRequest) {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-        return htmlResponse(
-            res.status,
-            `Falha ao trocar code por token: ${res.status}. ${JSON.stringify(data)}`,
-            null
-        );
+        const isInvalidClient =
+            res.status === 401 || String(data?.error).toLowerCase().includes("invalid_client");
+        const debugHtml = isInvalidClient
+            ? `<p><strong>Diagnóstico (invalid_client):</strong></p><ul>
+<li><strong>redirect_uri</strong> que estamos enviando: <code>${escapeHtml(redirectUri)}</code><br>Ela precisa ser <strong>exatamente igual</strong> à cadastrada no app no Melhor Envio (incluindo https, domínio e sem barra no final).</li>
+<li><strong>Ambiente:</strong> ${isSandbox ? "Sandbox" : "Produção"} (API: ${escapeHtml(baseUrl)})</li>
+<li><strong>client_id</strong> definido nas variáveis de ambiente: ${clientId ? "sim" : "não"}</li>
+<li><strong>client_secret</strong> definido: ${clientSecret ? "sim" : "não"}</li>
+<li>No Vercel: Project → Settings → Environment Variables. Confira <code>MELHOR_ENVIO_SANDBOX</code>=true, <code>MELHOR_ENVIO_SANDBOX_CLIENT_ID</code> e <code>MELHOR_ENVIO_SANDBOX_CLIENT_SECRET</code> (valores do app em app-sandbox.melhorenvio.com.br).</li>
+<li>Defina <code>MELHOR_ENVIO_REDIRECT_URI</code> com a mesma URL do item 1 (ex.: <code>https://seu-dominio.vercel.app/api/frete/oauth/callback</code>).</li>
+</ul>`
+            : "";
+        return htmlErrorResponse(res.status, `Falha ao trocar code por token: ${res.status}. ${JSON.stringify(data)}`, debugHtml);
     }
 
     const accessToken = data.access_token ?? data.token;
@@ -90,6 +98,11 @@ export async function GET(request: NextRequest) {
         refreshVar,
         expiresIn: data.expires_in,
     });
+}
+
+function htmlErrorResponse(status: number, errorMessage: string, debugHtml: string) {
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Erro OAuth Melhor Envio</title></head><body style="font-family:sans-serif;max-width:640px;margin:2rem auto;padding:1rem;"><h1>Erro</h1><p>${escapeHtml(errorMessage)}</p>${debugHtml}<p><a href="/api/frete/oauth/authorize">Tentar novamente</a></p></body></html>`;
+    return new NextResponse(html, { status, headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 
 function htmlResponse(

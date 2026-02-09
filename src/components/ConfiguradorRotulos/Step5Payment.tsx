@@ -69,6 +69,7 @@ export function Step5Payment() {
     const [cardTabMounted, setCardTabMounted] = useState(false);
     const [cepLoading, setCepLoading] = useState(false);
     const cardContainerRef = useRef<HTMLDivElement>(null);
+    const successRef = useRef<HTMLDivElement>(null);
     const brickLoaded = useRef(false);
     const confirmedOrderIds = useRef<Set<string>>(new Set());
 
@@ -447,6 +448,12 @@ export function Step5Payment() {
 
     const success = result && (result.status === "approved" || result.status === "processed" || result.status === "pending" || result.status === "in_process");
 
+    useEffect(() => {
+        if (success && result?.order_id && successRef.current) {
+            successRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }, [success, result?.order_id]);
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
             <div>
@@ -653,29 +660,31 @@ export function Step5Payment() {
             )}
 
             {success && result && (
-                <Card className="border-green-200 bg-green-50/80">
-                    <CardContent className="pt-6">
-                        <div className="flex items-start gap-3">
-                            <div className="rounded-full bg-green-500 p-2 text-white">
-                                <CheckCircle className="h-6 w-6" />
-                            </div>
-                            <div className="space-y-1">
-                                <p className="font-semibold text-green-800">
-                                    {(result.status === "approved" || result.status === "processed") && "Pagamento aprovado!"}
-                                    {(result.status === "pending" || result.status === "in_process") && "PIX gerado. Conclua o pagamento no app do seu banco."}
-                                </p>
-                                {result.order_id && (
-                                    <p className="text-sm text-green-700">
-                                        Número do pedido: <span className="font-mono font-bold">{result.order_id}</span>
+                <div ref={successRef} className="scroll-mt-4">
+                    <Card className="border-green-200 bg-green-50/80 shadow-md">
+                        <CardContent className="pt-6">
+                            <div className="flex items-start gap-3">
+                                <div className="rounded-full bg-green-500 p-2 text-white shrink-0">
+                                    <CheckCircle className="h-6 w-6" />
+                                </div>
+                                <div className="space-y-1 min-w-0">
+                                    <p className="font-semibold text-green-800">
+                                        {(result.status === "approved" || result.status === "processed") && "Pagamento aprovado!"}
+                                        {(result.status === "pending" || result.status === "in_process") && "PIX gerado. Conclua o pagamento no app do seu banco."}
                                     </p>
-                                )}
-                                <p className="text-xs text-green-600">
-                                    Seu pedido foi registrado. Guarde o número acima para acompanhamento.
-                                </p>
+                                    {result.order_id && (
+                                        <p className="text-sm text-green-700">
+                                            Número do pedido: <span className="font-mono font-bold break-all">{result.order_id}</span>
+                                        </p>
+                                    )}
+                                    <p className="text-xs text-green-600">
+                                        Seu pedido foi registrado. Guarde o número acima para acompanhamento.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
             )}
 
             <Tabs value={method} onValueChange={(v) => { setMethod(v as PaymentMethod); setResult(null); setError(null); }}>

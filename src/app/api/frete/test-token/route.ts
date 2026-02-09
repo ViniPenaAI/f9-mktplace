@@ -5,9 +5,15 @@ export const runtime = "nodejs";
 
 function getDiagnostico() {
     const isSandbox = process.env.MELHOR_ENVIO_SANDBOX === "true" || process.env.MELHOR_ENVIO_SANDBOX === "1";
-    const baseUrl =
+    let baseUrl =
         process.env.MELHOR_ENVIO_BASE_URL ??
         (isSandbox ? "https://sandbox.melhorenvio.com.br" : "https://api.melhorenvio.com.br");
+    if (baseUrl.includes("app.melhorenvio.com.br") && !baseUrl.includes("app-sandbox")) {
+        baseUrl = "https://api.melhorenvio.com.br";
+    }
+    if (baseUrl.includes("app-sandbox.melhorenvio.com.br")) {
+        baseUrl = "https://sandbox.melhorenvio.com.br";
+    }
     const tokenVar = isSandbox ? "MELHOR_ENVIO_SANDBOX_TOKEN" : "MELHOR_ENVIO_TOKEN";
     const tokenSet = isSandbox
         ? !!(process.env.MELHOR_ENVIO_SANDBOX_TOKEN?.trim() || process.env.MELHOR_ENVIO_TOKEN?.trim())
@@ -35,6 +41,7 @@ export async function GET() {
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         const is401 = message.includes("401") || message.includes("Unauthenticated");
+        const isHtmlResponse = message.includes("<!DOCTYPE") || message.includes("is not valid JSON");
         return NextResponse.json(
             {
                 ok: false,
@@ -45,6 +52,9 @@ export async function GET() {
                     variavel_token: diagnostico.tokenVar,
                     token_definido: diagnostico.tokenSet,
                 },
+                ...(isHtmlResponse && {
+                    dica: "A API retornou HTML em vez de JSON. Use MELHOR_ENVIO_BASE_URL=https://api.melhorenvio.com.br (produção) ou remova a variável. Não use app.melhorenvio.com.br (é o painel, não a API).",
+                }),
                 checklist_401: is401
                     ? [
                           "Token foi gerado no MESMO ambiente que base_url? (Sandbox: app-sandbox.melhorenvio.com.br → base sandbox; Produção: app.melhorenvio.com.br → base produção)",

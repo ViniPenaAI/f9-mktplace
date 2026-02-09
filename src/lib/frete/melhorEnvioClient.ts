@@ -6,7 +6,15 @@ const SANDBOX_URL = "https://sandbox.melhorenvio.com.br";
 function getBaseUrl(): string {
     const sandbox = process.env.MELHOR_ENVIO_SANDBOX;
     const isSandbox = sandbox === "true" || sandbox === "1";
-    return process.env.MELHOR_ENVIO_BASE_URL ?? (isSandbox ? SANDBOX_URL : PRODUCTION_URL);
+    let base = process.env.MELHOR_ENVIO_BASE_URL ?? (isSandbox ? SANDBOX_URL : PRODUCTION_URL);
+    // app.melhorenvio.com.br é o painel; a API de cotação/etiquetas é api.melhorenvio.com.br
+    if (base.includes("app.melhorenvio.com.br") && !base.includes("app-sandbox")) {
+        base = PRODUCTION_URL;
+    }
+    if (base.includes("app-sandbox.melhorenvio.com.br")) {
+        base = SANDBOX_URL;
+    }
+    return base;
 }
 
 function isSandboxEnv(): boolean {

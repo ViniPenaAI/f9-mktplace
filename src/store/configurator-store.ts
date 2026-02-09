@@ -60,6 +60,17 @@ export interface ShippingData {
     state: string;
 }
 
+/** Opção de frete escolhida no checkout (para enviar no pedido e gerar etiqueta depois). */
+export interface ShippingOptionSnapshot {
+    provider: string;
+    providerServicoId: string;
+    transportadora: string;
+    nomeServico: string;
+    preco: number;
+    prazoMinDias: number;
+    prazoMaxDias: number;
+}
+
 interface ConfiguratorState {
     currentStep: number;
     selectedProduct: ProductType | null;

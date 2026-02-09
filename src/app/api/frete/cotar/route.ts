@@ -72,7 +72,22 @@ export async function POST(request: NextRequest) {
             itens,
             providers,
         });
-        return NextResponse.json(resultado);
+        // Inclui o que foi enviado na cotação (para entender formação do valor do frete)
+        return NextResponse.json({
+            ...resultado,
+            dadosEnviados: {
+                cepOrigem,
+                cepDestino,
+                itens: itens.map((i) => ({
+                    pesoKg: i.pesoKg,
+                    larguraCm: i.larguraCm,
+                    alturaCm: i.alturaCm,
+                    comprimentoCm: i.comprimentoCm,
+                    valorDeclarado: i.valorDeclarado,
+                    pesoCubadoKg: (i.larguraCm * i.alturaCm * i.comprimentoCm) / 6000,
+                })),
+            },
+        });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Erro ao calcular frete";
         console.error("[POST /api/frete/cotar]", err);

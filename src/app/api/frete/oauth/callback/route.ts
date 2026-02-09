@@ -53,15 +53,22 @@ export async function GET(request: NextRequest) {
 
     const body = new URLSearchParams({
         grant_type: "authorization_code",
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        code: code,
+        client_id: clientId.trim(),
+        client_secret: clientSecret.trim(),
+        redirect_uri: redirectUri.trim(),
+        code: code.trim(),
     });
+
+    // Doc Melhor Envio: User-Agent é obrigatório ("Aplicação (email para contato técnico)")
+    const userAgent = process.env.MELHOR_ENVIO_USER_AGENT ?? "F9 Marketplace (contato@f9.com.br)";
 
     const res = await fetch(`${baseUrl}/oauth/token`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+            "User-Agent": userAgent,
+        },
         body: body.toString(),
         signal: AbortSignal.timeout(15000),
     });

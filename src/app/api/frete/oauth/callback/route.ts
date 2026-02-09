@@ -123,14 +123,15 @@ function htmlResponse(
 <html><head><meta charset="utf-8"><title>Token Melhor Envio</title></head>
 <body style="font-family:sans-serif;max-width:720px;margin:2rem auto;padding:1rem;">
 <h1>Token obtido</h1>
-<p>Copie o valor abaixo para o seu <code>.env.local</code>:</p>
+<p>Copie os valores abaixo para o seu <code>.env.local</code> (e no Vercel):</p>
 <p><strong>${escapeHtml(tokens!.envVar)}</strong></p>
 <textarea readonly style="width:100%;height:80px;font-size:12px;">${escapeHtml(tokens!.accessToken)}</textarea>
-<p>No .env.local:</p>
-<pre style="background:#f0f0f0;padding:1rem;overflow:auto;">${escapeHtml(tokens!.envVar)}=COLE_O_TOKEN_ACIMA_AQUI</pre>
-${tokens!.refreshToken ? `<p><strong>Refresh token</strong> (opcional; use para renovar em 30 dias):</p><textarea readonly style="width:100%;height:60px;font-size:12px;">${escapeHtml(tokens!.refreshToken)}</textarea><p>Variável: <code>${escapeHtml(tokens!.refreshVar)}</code></p>` : ""}
-${tokens!.expiresIn ? `<p><small>Validade: ${tokens!.expiresIn} segundos (~30 dias). Após isso, use o refresh token ou refaça a autorização.</small></p>` : ""}
-<p><a href="/api/frete/test-token">Testar token</a></p>
+${tokens!.refreshToken ? `<p><strong>${escapeHtml(tokens!.refreshVar)}</strong></p><textarea readonly style="width:100%;height:60px;font-size:12px;">${escapeHtml(tokens!.refreshToken)}</textarea><p><small>Guarde para renovar o access_token sem refazer a autorização (rota <a href="/api/frete/oauth/refresh">/api/frete/oauth/refresh</a>).</small></p>` : ""}
+<p>Exemplo no .env.local:</p>
+<pre style="background:#f0f0f0;padding:1rem;overflow:auto;">${escapeHtml(tokens!.envVar)}=COLE_O_ACCESS_TOKEN_ACIMA
+${tokens!.refreshToken ? escapeHtml(tokens!.refreshVar) + "=COLE_O_REFRESH_TOKEN_ACIMA\n" : ""}</pre>
+${tokens!.expiresIn ? `<p><small>Access token válido por ${tokens!.expiresIn} segundos (~30 dias).</small></p>` : ""}
+<p><a href="/api/frete/test-token">Testar token</a> · <a href="/api/frete/oauth/refresh">Renovar token</a></p>
 </body></html>`;
     return new NextResponse(html, {
         status,

@@ -40,6 +40,19 @@ function onlyDigits(s: string): string {
     return (s || "").replace(/\D/g, "");
 }
 
+// Gramatura aproximada por material (g/m²). Principal: vinil adesivo ~150 g/m².
+function getGramaturaForMaterial(material: string | undefined): number {
+    switch (material) {
+        case "paper_couche":
+            return 155;
+        case "vinyl_white":
+        case "vinyl_transparent":
+        case "bopp":
+        default:
+            return 150;
+    }
+}
+
 /** Converte URL da arte (blob ou data) em base64 para enviar ao backend. */
 async function getArtBase64(url: string | null | undefined): Promise<string | undefined> {
     if (!url?.startsWith("blob:") && !url?.startsWith("data:")) return undefined;
@@ -62,7 +75,22 @@ async function getArtBase64(url: string | null | undefined): Promise<string | un
 }
 
 export function Step5Payment() {
-    const { totalPrice, shippingCost, customer, shipping, specs, artwork, selectedProduct, selectedShippingOption, updateCustomer, updateShipping, setShippingCost, setSelectedShippingOption } = useConfiguratorStore();
+    const {
+        totalPrice,
+        shippingCost,
+        customer,
+        shipping,
+        specs,
+        artwork,
+        selectedProduct,
+        selectedShippingOption,
+        shippingInsurance,
+        updateCustomer,
+        updateShipping,
+        setShippingCost,
+        setSelectedShippingOption,
+        setShippingInsurance,
+    } = useConfiguratorStore();
     const [method, setMethod] = useState<PaymentMethod>("pix");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -204,6 +232,11 @@ export function Step5Payment() {
         addressComplete &&
         (!hasFreteOptions || !!selectedShippingOption);
 
+    const insuranceLabel =
+        shippingInsurance === "with"
+            ? "Com seguro de transporte (recomendado)"
+            : "Sem seguro – aceito o risco de avaria no transporte";
+
     // Frete via Melhor Envio (cotar → 3 opções: mais barato, mais rápido, equilíbrio)
     useEffect(() => {
         if (!cepOk) {
@@ -238,6 +271,7 @@ export function Step5Payment() {
                 format: artwork.presentationType,
                 widthMm: specs.width,
                 heightMm: specs.height,
+                gramatura: getGramaturaForMaterial(specs.material),
             });
             itens = [
                 {
@@ -263,7 +297,11 @@ export function Step5Payment() {
         fetch("/api/frete/cotar", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ cepDestino: cep, itens }),
+            body: JSON.stringify({
+                cepDestino: cep,
+                itens,
+                insurance: shippingInsurance === "with",
+            }),
         })
             .then((res) => res.json())
             .then((data) => {
@@ -690,6 +728,42 @@ export function Step5Payment() {
                             </p>
                         ) : freteOpcoes && (freteOpcoes.maisBarato || freteOpcoes.maisRapido || freteOpcoes.intermediario) ? (
                             <>
+                                <div className="space-y-2 text-sm">
+                                    <p className="font-medium text-gray-700">Seguro de transporte</p>
+                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+                                        <label className="inline-flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="shipping-insurance"
+                                                className="h-4 w-4"
+                                                checked={shippingInsurance === "with"}
+                                                onChange={() => setShippingInsurance("with")}
+                                            />
+                                            <span>
+                                                <span className="font-medium">Com seguro (recomendado)</span>{" "}
+                                                <span className="text-gray-600">
+                                                    – cobre o valor total do pedido em caso de perda ou extravio.
+                                                </span>
+                                            </span>
+                                        </label>
+                                        <label className="inline-flex items-start gap-2 text-xs sm:text-sm cursor-pointer text-gray-700">
+                                            <input
+                                                type="radio"
+                                                name="shipping-insurance"
+                                                className="h-4 w-4 mt-0.5"
+                                                checked={shippingInsurance === "without"}
+                                                onChange={() => setShippingInsurance("without")}
+                                            />
+                                            <span>
+                                                <span className="font-medium text-amber-700">Sem seguro</span>{" "}
+                                                <span className="text-amber-700">
+                                                    – em caso de avarias ou perdas no transporte, o cliente assume o risco.
+                                                    Nossos produtos são bem embalados, mas não nos responsabilizamos por danos causados pela transportadora.
+                                                </span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div className="grid gap-3 sm:grid-cols-3">
                                     {freteOpcoes.maisBarato && (
                                         <button

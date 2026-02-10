@@ -1,6 +1,8 @@
 import type { CotacaoFreteNormalizada, Transportadora } from "./types";
 
-const PRODUCTION_URL = "https://api.melhorenvio.com.br";
+// Conforme docs oficiais, a API v2 usa melhorenvio.com.br e sandbox.melhorenvio.com.br
+// ENOTFOUND em api.melhorenvio.com.br na Vercel → voltar para o host raiz.
+const PRODUCTION_URL = "https://melhorenvio.com.br";
 const SANDBOX_URL = "https://sandbox.melhorenvio.com.br";
 
 function getBaseUrl(): string {

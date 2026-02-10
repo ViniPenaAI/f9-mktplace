@@ -181,8 +181,9 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
             non_commercial: false,
         },
     };
+    // Serviços: 1=SEDEX, 2=PAC, 3=Jadlog, 17=Correios Mini, 18=Leme. Sem isso a API pode devolver só uma transportadora.
     const servicesEnv = process.env.MELHOR_ENVIO_SERVICES;
-    if (servicesEnv) body.services = servicesEnv;
+    body.services = servicesEnv?.trim() || "1,2,3,17,18";
 
     let res: Response;
     try {

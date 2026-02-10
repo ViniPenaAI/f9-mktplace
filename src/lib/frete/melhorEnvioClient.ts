@@ -64,6 +64,8 @@ export interface CotacaoInput {
     cepOrigem: string;
     cepDestino: string;
     itens: ItemParaCotacao[];
+    /** Se definido, força uso ou não de seguro nesta cotação específica. */
+    insurance?: boolean;
 }
 
 /** Payload do calculate: weight em gramas (guia Melhor Envio). */
@@ -150,12 +152,18 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
                   },
               ];
 
+    // Seguro: desligar reduz o frete; sem seguro não há indenização em perda/avaria. Ver docs/frete-seguro-beneficios-contras.md
+    const insuranceEnv = process.env.MELHOR_ENVIO_INSURANCE;
+    const defaultInsurance = !(insuranceEnv === "false" || insuranceEnv === "0");
+    // Se a rota de cotação informar insurance explicitamente, priorizamos a escolha do cliente.
+    const insurance = typeof input.insurance === "boolean" ? input.insurance : defaultInsurance;
+
     const body: Record<string, unknown> = {
         from: { postal_code: cepOrigem },
         to: { postal_code: cepDestino },
         products,
         options: {
-            insurance: true,
+            insurance,
             receipt: false,
             own_hand: false,
             non_commercial: false,

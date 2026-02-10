@@ -18,7 +18,9 @@ function getDiagnostico() {
     const tokenSet = isSandbox
         ? !!(process.env.MELHOR_ENVIO_SANDBOX_TOKEN?.trim() || process.env.MELHOR_ENVIO_TOKEN?.trim())
         : !!process.env.MELHOR_ENVIO_TOKEN?.trim();
-    return { baseUrl, isSandbox, tokenVar, tokenSet };
+    const useMockEnv =
+        process.env.MELHOR_ENVIO_MOCK === "1" || process.env.MELHOR_ENVIO_MOCK === "true";
+    return { baseUrl, isSandbox, tokenVar, tokenSet, useMockEnv };
 }
 
 /**
@@ -33,15 +35,34 @@ export async function GET() {
         await cotarFreteMelhorEnvio({
             cepOrigem,
             cepDestino,
-            itens: [
-                { pesoKg: 0.3, larguraCm: 16, alturaCm: 16, comprimentoCm: 16, valorDeclarado: 50 },
-            ],
+            itens: [{ pesoKg: 0.3, larguraCm: 16, alturaCm: 16, comprimentoCm: 16, valorDeclarado: 50 }],
         });
-        return NextResponse.json({ ok: true, message: "Token válido. Cotação retornou opções." });
+        console.log("[/api/frete/test-token] Sucesso na cotação Melhor Envio", {
+            base_url: diagnostico.baseUrl,
+            sandbox: diagnostico.isSandbox,
+            use_mock_env: diagnostico.useMockEnv,
+        });
+        return NextResponse.json({
+            ok: true,
+            message: "Token válido. Cotação retornou opções.",
+            diagnostico: {
+                base_url: diagnostico.baseUrl,
+                sandbox: diagnostico.isSandbox,
+                variavel_token: diagnostico.tokenVar,
+                token_definido: diagnostico.tokenSet,
+                use_mock_env: diagnostico.useMockEnv,
+            },
+        });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         const is401 = message.includes("401") || message.includes("Unauthenticated");
         const isHtmlResponse = message.includes("<!DOCTYPE") || message.includes("is not valid JSON");
+        console.error("[/api/frete/test-token] Erro ao testar token Melhor Envio", {
+            message,
+            base_url: diagnostico.baseUrl,
+            sandbox: diagnostico.isSandbox,
+            use_mock_env: diagnostico.useMockEnv,
+        });
         return NextResponse.json(
             {
                 ok: false,

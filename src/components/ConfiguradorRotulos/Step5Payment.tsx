@@ -327,7 +327,19 @@ export function Step5Payment() {
         return () => {
             cancelled = true;
         };
-    }, [cepOk, shipping.zipCode, setShippingCost, setSelectedShippingOption, selectedProduct, specs?.quantity, specs?.width, specs?.height, artwork?.presentationType, totalPrice]);
+    }, [
+        cepOk,
+        shipping.zipCode,
+        setShippingCost,
+        setSelectedShippingOption,
+        selectedProduct,
+        specs?.quantity,
+        specs?.width,
+        specs?.height,
+        artwork?.presentationType,
+        totalPrice,
+        shippingInsurance,
+    ]);
 
     const selectFreteOption = (op: CotacaoFreteNormalizada) => {
         setShippingCost(op.preco / 100);

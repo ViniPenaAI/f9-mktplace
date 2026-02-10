@@ -128,6 +128,12 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
     const cepDestino = input.cepDestino.replace(/\D/g, "").slice(0, 8);
     const valorTotal = input.itens.reduce((acc, i) => acc + i.valorDeclarado, 0);
 
+    // Seguro: desligar reduz o frete; sem seguro não há indenização em perda/avaria. Ver docs/frete-seguro-beneficios-contras.md
+    const insuranceEnv = process.env.MELHOR_ENVIO_INSURANCE;
+    const defaultInsurance = !(insuranceEnv === "false" || insuranceEnv === "0");
+    // Se a rota de cotação informar insurance explicitamente, priorizamos a escolha do cliente.
+    const insurance = typeof input.insurance === "boolean" ? input.insurance : defaultInsurance;
+
     // Peso em gramas; insurance_value em centavos (conforme doc Melhor Envio).
     const products: MelhorEnvioProductPayload[] =
         input.itens.length > 0
@@ -138,7 +144,7 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
                   length: item.comprimentoCm,
                   weight: Math.round(item.pesoKg * 1000),
                   quantity: 1,
-                  insurance_value: Math.round(Math.max(0, item.valorDeclarado) * 100),
+                  insurance_value: insurance ? Math.round(Math.max(0, item.valorDeclarado) * 100) : 0,
               }))
             : [
                   {
@@ -148,15 +154,9 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
                       length: 16,
                       weight: 300,
                       quantity: 1,
-                      insurance_value: Math.round(Math.max(0.01, valorTotal) * 100),
+                      insurance_value: insurance ? Math.round(Math.max(0.01, valorTotal) * 100) : 0,
                   },
               ];
-
-    // Seguro: desligar reduz o frete; sem seguro não há indenização em perda/avaria. Ver docs/frete-seguro-beneficios-contras.md
-    const insuranceEnv = process.env.MELHOR_ENVIO_INSURANCE;
-    const defaultInsurance = !(insuranceEnv === "false" || insuranceEnv === "0");
-    // Se a rota de cotação informar insurance explicitamente, priorizamos a escolha do cliente.
-    const insurance = typeof input.insurance === "boolean" ? input.insurance : defaultInsurance;
 
     const body: Record<string, unknown> = {
         from: { postal_code: cepOrigem },

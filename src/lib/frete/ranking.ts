@@ -23,10 +23,11 @@ export function destilarOpcoes(cotacoes: CotacaoFreteNormalizada[]): OpcoesDesti
         })
         .sort((a, b) => a.score - b.score);
 
-    let intermediario = pontuado[0].c;
+    let intermediario: CotacaoFreteNormalizada | null = pontuado[0].c;
     if (intermediario === maisBarato || intermediario === maisRapido) {
-        intermediario =
-            pontuado.find((p) => p.c !== maisBarato && p.c !== maisRapido)?.c ?? intermediario;
+        const outro = pontuado.find((p) => p.c !== maisBarato && p.c !== maisRapido)?.c;
+        // Só mostra "Equilíbrio" se for uma opção distinta (evita duplicar quando há só 2 ofertas)
+        intermediario = outro ?? null;
     }
 
     return { maisBarato, maisRapido, intermediario };

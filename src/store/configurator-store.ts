@@ -84,6 +84,8 @@ interface ConfiguratorState {
     shippingCost: number;
     /** Opção de frete selecionada (Melhor Envio etc.) para etiqueta após pagamento */
     selectedShippingOption: ShippingOptionSnapshot | null;
+    /** Preferência de seguro de transporte escolhida pelo cliente (frete). */
+    shippingInsurance: "with" | "without";
 
     // Actions
     setStep: (step: number) => void;
@@ -95,6 +97,7 @@ interface ConfiguratorState {
     updateShipping: (shipping: Partial<ShippingData>) => void;
     setShippingCost: (value: number) => void;
     setSelectedShippingOption: (option: ShippingOptionSnapshot | null) => void;
+    setShippingInsurance: (value: "with" | "without") => void;
     calculatePrice: () => void;
 }
 
@@ -143,6 +146,7 @@ export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
     totalPrice: 0,
     shippingCost: 0,
     selectedShippingOption: null,
+    shippingInsurance: "with",
 
     setStep: (step) => set({ currentStep: step }),
     setSelectedProduct: (product) => set({ selectedProduct: product }),
@@ -164,6 +168,7 @@ export const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
 
     setShippingCost: (value) => set({ shippingCost: value }),
     setSelectedShippingOption: (option) => set({ selectedShippingOption: option }),
+    setShippingInsurance: (value) => set({ shippingInsurance: value }),
 
     calculatePrice: () => {
         // Simple mock pricing logic

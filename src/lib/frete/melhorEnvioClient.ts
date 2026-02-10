@@ -70,7 +70,7 @@ export interface CotacaoInput {
     insurance?: boolean;
 }
 
-/** Payload do calculate: weight em gramas (guia Melhor Envio). */
+/** Payload do calculate: weight em kg, insurance_value em reais (doc oficial). */
 interface MelhorEnvioProductPayload {
     id: string;
     width: number;
@@ -93,6 +93,7 @@ interface MelhorEnvioPackage {
     service_code?: string;
     company?: { id: number; name: string };
     carrier?: { id: number; name: string };
+    error?: { short?: string; long?: string };
 }
 
 interface MelhorEnvioCalculateResponse {
@@ -136,7 +137,7 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
     // Se a rota de cotação informar insurance explicitamente, priorizamos a escolha do cliente.
     const insurance = typeof input.insurance === "boolean" ? input.insurance : defaultInsurance;
 
-    // Peso em gramas; insurance_value em centavos (conforme doc Melhor Envio).
+    // Doc: weight em kg, insurance_value em reais (obrigatório).
     const products: MelhorEnvioProductPayload[] =
         input.itens.length > 0
             ? input.itens.map((item, idx) => ({
@@ -144,9 +145,9 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
                   width: item.larguraCm,
                   height: item.alturaCm,
                   length: item.comprimentoCm,
-                  weight: Math.round(item.pesoKg * 1000),
+                  weight: Math.max(0.01, item.pesoKg),
                   quantity: 1,
-                  insurance_value: insurance ? Math.round(Math.max(0, item.valorDeclarado) * 100) : 0,
+                  insurance_value: insurance ? Math.max(0, item.valorDeclarado) : 0,
               }))
             : [
                   {
@@ -154,9 +155,9 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
                       width: 16,
                       height: 16,
                       length: 16,
-                      weight: 300,
+                      weight: 0.3,
                       quantity: 1,
-                      insurance_value: insurance ? Math.round(Math.max(0.01, valorTotal) * 100) : 0,
+                      insurance_value: insurance ? Math.max(0.01, valorTotal) : 0,
                   },
               ];
 
@@ -216,7 +217,10 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
     const data: unknown = await res.json();
     const list = parsePackagesFromCalculate(data);
 
-    const normalizado: CotacaoFreteNormalizada[] = list.map((pkg) => {
+    // Ignora pacotes com erro (ex.: "Serviço indisponível para esta rota") ou sem preço
+    const validos = list.filter((pkg) => !pkg.error && (pkg.custom_price != null || pkg.price != null));
+
+    const normalizado: CotacaoFreteNormalizada[] = validos.map((pkg) => {
         const serviceId = pkg.service ?? pkg.service_id ?? 0;
         const company = pkg.company ?? pkg.carrier;
         const precoReais = pkg.custom_price ?? pkg.price ?? 0;
@@ -226,9 +230,9 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
             providerServicoId: String(serviceId),
             transportadora: mapCompanyToTransportadora(company?.name ?? ""),
             nomeServico: pkg.service_name ?? (company?.name ? String(serviceId) : "Frete"),
-            preco: Math.round(precoReais * 100),
-            prazoMinDias: prazoDias,
-            prazoMaxDias: prazoDias,
+            preco: Math.round(Number(precoReais) * 100),
+            prazoMinDias: Number(prazoDias) || 0,
+            prazoMaxDias: Number(prazoDias) || 0,
         };
     });
 

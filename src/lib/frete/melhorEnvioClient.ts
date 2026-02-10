@@ -182,12 +182,28 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
         });
     } catch (err) {
         const cause = err instanceof Error ? err.cause ?? err.message : String(err);
-        const isNetwork = String(cause).includes("ENOTFOUND") || String(cause).includes("fetch failed") || String(cause).includes("ECONNREFUSED");
+        const isNetwork =
+            String(cause).includes("ENOTFOUND") ||
+            String(cause).includes("fetch failed") ||
+            String(cause).includes("ECONNREFUSED");
+
+        console.error("[Melhor Envio] Erro ao chamar /api/v2/me/shipment/calculate", {
+            url,
+            isNetwork,
+            cause,
+        });
+
+        // Em erro de rede/DNS NÃO usamos mais MOCK: deixamos falhar para aparecer no /api/frete/test-token
         if (isNetwork) {
-            console.warn("[Melhor Envio] API inacessível (rede/DNS). Use MELHOR_ENVIO_MOCK=1 para testar com dados fictícios.", cause);
-            return getMockCotacoes();
+            throw new Error(
+                `[Melhor Envio] API inacessível (rede/DNS). Verifique MELHOR_ENVIO_BASE_URL, DNS e saída de rede da Vercel.\nCausa: ${String(
+                    cause,
+                )}`,
+            );
         }
-        throw err;
+
+        // Outros erros sobem normalmente
+        throw err instanceof Error ? err : new Error(String(err));
     }
 
     if (!res.ok) {

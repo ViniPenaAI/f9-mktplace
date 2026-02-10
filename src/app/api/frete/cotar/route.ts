@@ -15,6 +15,8 @@ type Body = {
         valorDeclarado?: number;
     }>;
     providers?: string[];
+    /** Se true, usa seguro na cotação; se false, sem seguro. Se omitido, usa padrão do servidor. */
+    insurance?: boolean;
 };
 
 export async function POST(request: NextRequest) {
@@ -71,6 +73,7 @@ export async function POST(request: NextRequest) {
             cepDestino,
             itens,
             providers,
+            insurance: typeof body.insurance === "boolean" ? body.insurance : undefined,
         });
         // Inclui o que foi enviado na cotação (para entender formação do valor do frete)
         return NextResponse.json({
@@ -86,6 +89,7 @@ export async function POST(request: NextRequest) {
                     valorDeclarado: i.valorDeclarado,
                     pesoCubadoKg: (i.larguraCm * i.alturaCm * i.comprimentoCm) / 6000,
                 })),
+                insurance: typeof body.insurance === "boolean" ? body.insurance : null,
             },
         });
     } catch (err) {

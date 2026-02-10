@@ -30,6 +30,9 @@ export interface PackageDimensions {
 const MIN_COMPRIMENTO_CM = 16;
 const MIN_LARGURA_CM = 11;
 const MIN_ALTURA_CM = 2;
+const MAX_COMPRIMENTO_CM = 60;
+const MAX_LARGURA_CM = 50;
+const MAX_ALTURA_CM = 30;
 const PESO_MINIMO_KG = 0.3;
 
 // Gramatura padrão (g/m²) para rótulos/adesivos. Vinil adesivo principal: ~150 g/m².
@@ -61,11 +64,26 @@ export function calcRotulosPackage(input: RotulosPackageInput): PackageDimension
         Math.round((pesoMaterialKg + PESO_EMBALAGEM_KG) * 100) / 100
     );
 
+    // Escala dimensões com o peso: pacotes mais pesados (mais rótulos/área) ocupam mais espaço
+    const scale = 1 + Math.min(1.2, (pesoKg - PESO_MINIMO_KG) * 0.35);
+    const comprimentoCm = Math.min(
+        MAX_COMPRIMENTO_CM,
+        Math.max(MIN_COMPRIMENTO_CM, Math.ceil(base.comprimentoCm * scale))
+    );
+    const larguraCm = Math.min(
+        MAX_LARGURA_CM,
+        Math.max(MIN_LARGURA_CM, Math.ceil(base.larguraCm * scale))
+    );
+    const alturaCm = Math.min(
+        MAX_ALTURA_CM,
+        Math.max(MIN_ALTURA_CM, Math.ceil(base.alturaCm * scale))
+    );
+
     return {
         pesoKg,
-        comprimentoCm: base.comprimentoCm,
-        larguraCm: base.larguraCm,
-        alturaCm: base.alturaCm,
+        comprimentoCm,
+        larguraCm,
+        alturaCm,
     };
 }
 

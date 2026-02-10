@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             insurance: typeof body.insurance === "boolean" ? body.insurance : undefined,
         });
         // Inclui o que foi enviado na cotação (para entender formação do valor do frete)
-        return NextResponse.json({
+        const json: Record<string, unknown> = {
             ...resultado,
             dadosEnviados: {
                 cepOrigem,
@@ -91,7 +91,12 @@ export async function POST(request: NextRequest) {
                 })),
                 insurance: typeof body.insurance === "boolean" ? body.insurance : null,
             },
-        });
+        };
+        if (resultado.cotacoes.length === 0) {
+            json.aviso =
+                "Cotação vazia. Veja em Vercel > Project > Logs (Runtime Logs) a resposta bruta do Melhor Envio (busque por [Melhor Envio]).";
+        }
+        return NextResponse.json(json);
     } catch (err) {
         const message = err instanceof Error ? err.message : "Erro ao calcular frete";
         console.error("[POST /api/frete/cotar]", err);

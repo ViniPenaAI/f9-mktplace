@@ -1,11 +1,11 @@
 /**
- * Cálculo de embalagem e peso para RÓTULOS (Correios).
- * Banners, faixas e outros produtos usarão tabelas separadas no futuro.
+ * Cálculo de embalagem para RÓTULOS (e futuramente outros materiais).
+ * Regra: não usar caixa quando não for necessário – envelope / pacote plano,
+ * dimensões pelo metro quadrado e empilhamento, economizando espaço.
  *
- * Regras:
- * - Cartela: rótulos em folhas (tipo A4). Estima número de folhas e caixa para acomodar.
- * - Unidades: rótulos soltos. Estima caixa por volume aproximado.
- * - Peso mínimo Correios: 0,3 kg. Dimensões mínimas respeitadas.
+ * - Cartela: folhas cortadas em tamanho menor, empilhadas (comprimento x largura = folha; altura = pilha).
+ * - Unidades: rótulos em envelope plano (área por m², altura mínima).
+ * Dimensões mínimas Correios: 13x8x1 cm. Usamos 16x11x2 cm para aceitação em mais modalidades.
  */
 
 export type PresentationType = "cartela" | "unidades";
@@ -15,6 +15,8 @@ export interface RotulosPackageInput {
     format: PresentationType;
     widthMm: number;
     heightMm: number;
+    /** Gramatura do material em g/m² (ex.: vinil adesivo 150g/m²). Se não vier, usa padrão. */
+    gramatura?: number;
 }
 
 export interface PackageDimensions {
@@ -24,65 +26,99 @@ export interface PackageDimensions {
     alturaCm: number;
 }
 
+// Dimensões mínimas aceitas (Correios: 13x8x1; usamos 16x11x2 para envelope em várias modalidades)
+const MIN_COMPRIMENTO_CM = 16;
+const MIN_LARGURA_CM = 11;
+const MIN_ALTURA_CM = 2;
 const PESO_MINIMO_KG = 0.3;
-const DIM_MIN_CM = 16;
-const DIM_MIN_ALTURA_CM = 2;
+
+// Gramatura padrão (g/m²) para rótulos/adesivos. Vinil adesivo principal: ~150 g/m².
+const GRAMATURA_PADRAO_G_M2 = 150;
+// Embalagem leve (envelope/sleeve/caixa pequena)
+const PESO_EMBALAGEM_KG = 0.02;
 
 /**
- * Estima embalagem para rótulos conforme quantidade, formato (cartela/unidades) e tamanho (mm).
+ * Estima embalagem para rótulos: pacote plano/envelope, sem caixa, otimizado por m².
  */
 export function calcRotulosPackage(input: RotulosPackageInput): PackageDimensions {
     const { quantity, format, widthMm, heightMm } = input;
     const qty = Math.max(1, Math.floor(quantity));
     const w = Math.max(10, widthMm);
     const h = Math.max(10, heightMm);
+    const areaMm2 = w * h * qty;
+    const areaM2 = areaMm2 / 1_000_000;
+    const gramatura = Math.max(50, input.gramatura ?? GRAMATURA_PADRAO_G_M2);
+    // Peso do material em kg: (g/m² * m²) / 1000
+    const pesoMaterialKg = (areaM2 * gramatura) / 1000;
 
-    if (format === "cartela") {
-        return calcCartela(qty, w, h);
-    }
-    return calcUnidades(qty, w, h);
-}
+    const base =
+        format === "cartela"
+            ? calcCartelaCompacta(qty, w, h)
+            : calcUnidadesEnvelope(qty, w, h);
 
-/** Cartela: folhas A4 (297x210 mm). Estima quantas folhas e caixa. */
-function calcCartela(quantity: number, widthMm: number, heightMm: number): PackageDimensions {
-    const A4_LARGURA_MM = 297;
-    const A4_ALTURA_MM = 210;
-    const rotulosPorFolha = Math.max(1, Math.floor(A4_LARGURA_MM / widthMm) * Math.floor(A4_ALTURA_MM / heightMm));
-    const numFolhas = Math.max(1, Math.ceil(quantity / rotulosPorFolha));
-
-    // Caixa para folhas: base A4 + margem, altura por quantidade de folhas
-    const comprimentoCm = 32;
-    const larguraCm = 24;
-    const alturaCm = Math.min(20, Math.max(3, Math.round(2 + 1.2 * numFolhas)));
-
-    // Peso: ~80g por folha (papel + rótulos) + ~150g embalagem
-    const pesoKg = Math.max(PESO_MINIMO_KG, Math.round((0.15 + 0.08 * numFolhas) * 100) / 100);
+    const pesoKg = Math.max(
+        PESO_MINIMO_KG,
+        Math.round((pesoMaterialKg + PESO_EMBALAGEM_KG) * 100) / 100
+    );
 
     return {
         pesoKg,
-        comprimentoCm: Math.max(DIM_MIN_CM, comprimentoCm),
-        larguraCm: Math.max(11, larguraCm),
-        alturaCm: Math.max(DIM_MIN_ALTURA_CM, alturaCm),
+        comprimentoCm: base.comprimentoCm,
+        larguraCm: base.larguraCm,
+        alturaCm: base.alturaCm,
     };
 }
 
-/** Unidades: rótulos soltos. Caixa por área total e empilhamento. */
-function calcUnidades(quantity: number, widthMm: number, heightMm: number): PackageDimensions {
-    const areaMm2 = widthMm * heightMm * quantity;
-    // Base da caixa proporcional à raiz da área (em cm)
-    const ladoBaseCm = Math.sqrt(areaMm2 / 100) * 0.4;
-    const comprimentoCm = Math.min(40, Math.max(DIM_MIN_CM, Math.ceil(ladoBaseCm * (widthMm / heightMm || 1))));
-    const larguraCm = Math.min(35, Math.max(11, Math.ceil(ladoBaseCm * (heightMm / widthMm || 1))));
-    const alturaCm = Math.min(15, Math.max(3, Math.ceil(2 + quantity / 80)));
+/**
+ * Cartela: folhas cortadas em tamanho menor (não A4 inteiro), empilhadas.
+ * Comprimento x largura = tamanho da “folha cortada”; altura = espessura da pilha.
+ */
+function calcCartelaCompacta(
+    quantity: number,
+    widthMm: number,
+    heightMm: number
+): Omit<PackageDimensions, "pesoKg"> {
+    const A4_LARGURA_MM = 297;
+    const A4_ALTURA_MM = 210;
+    const rotulosPorFolha = Math.max(
+        1,
+        Math.floor(A4_LARGURA_MM / widthMm) * Math.floor(A4_ALTURA_MM / heightMm)
+    );
+    const numFolhas = Math.max(1, Math.ceil(quantity / rotulosPorFolha));
 
-    // Peso: ~2g por dm² de rótulos + embalagem
-    const areaDm2 = areaMm2 / 10000;
-    const pesoKg = Math.max(PESO_MINIMO_KG, Math.round((0.15 + areaDm2 * 0.002) * 100) / 100);
+    // Folha cortada (menor que A4) para caber em envelope; empilhar
+    const comprimentoCm = Math.max(MIN_COMPRIMENTO_CM, 22);
+    const larguraCm = Math.max(MIN_LARGURA_CM, 16);
+    const alturaCm = Math.max(MIN_ALTURA_CM, Math.min(10, 0.5 + 0.2 * numFolhas));
 
     return {
-        pesoKg,
-        comprimentoCm: Math.max(DIM_MIN_CM, comprimentoCm),
-        larguraCm: Math.max(11, larguraCm),
-        alturaCm: Math.max(DIM_MIN_ALTURA_CM, alturaCm),
+        comprimentoCm,
+        larguraCm,
+        alturaCm,
+    };
+}
+
+/**
+ * Unidades: rótulos soltos em envelope plano. Base pela área total; altura mínima.
+ */
+function calcUnidadesEnvelope(
+    _quantity: number,
+    widthMm: number,
+    heightMm: number
+): Omit<PackageDimensions, "pesoKg"> {
+    const comprimentoCm = Math.max(
+        MIN_COMPRIMENTO_CM,
+        Math.min(35, Math.ceil(Math.max(widthMm, heightMm) / 10) + 2)
+    );
+    const larguraCm = Math.max(
+        MIN_LARGURA_CM,
+        Math.min(30, Math.ceil(Math.min(widthMm, heightMm) / 10) + 2)
+    );
+    const alturaCm = MIN_ALTURA_CM;
+
+    return {
+        comprimentoCm,
+        larguraCm,
+        alturaCm,
     };
 }

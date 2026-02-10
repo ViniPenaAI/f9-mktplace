@@ -82,14 +82,16 @@ interface MelhorEnvioProductPayload {
     insurance_value: number;
 }
 
-/** Resposta do calculate: packages[] (aceita service/service_id, company/carrier conforme doc). */
+/** Resposta do calculate: pode ser objeto com packages[] ou array no topo (formato melhorenvio.com.br). */
 interface MelhorEnvioPackage {
-    price: number;
-    custom_price?: number;
+    price?: number | string;
+    custom_price?: number | string;
     delivery_time?: number;
     custom_delivery_time?: number;
     service?: number;
     service_id?: number;
+    id?: number;
+    name?: string;
     service_name?: string;
     service_code?: string;
     company?: { id: number; name: string };
@@ -104,6 +106,8 @@ interface MelhorEnvioCalculateResponse {
 
 function parsePackagesFromCalculate(data: unknown): MelhorEnvioPackage[] {
     if (!data || typeof data !== "object") return [];
+    // API em melhorenvio.com.br retorna array no topo: [ { id, name, price, custom_price, delivery_time, ... }, ... ]
+    if (Array.isArray(data)) return data as MelhorEnvioPackage[];
     const r = data as MelhorEnvioCalculateResponse & { data?: MelhorEnvioPackage[]; results?: MelhorEnvioPackage[] };
     if (Array.isArray(r.packages)) return r.packages;
     if (Array.isArray(r.data)) return r.data;
@@ -222,8 +226,12 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
     const data: unknown = await res.json();
     const list = parsePackagesFromCalculate(data);
 
-    // Ignora pacotes com erro (ex.: "Serviço indisponível para esta rota") ou sem preço
-    const validos = list.filter((pkg) => !pkg.error && (pkg.custom_price != null || pkg.price != null));
+    // Ignora pacotes com erro ou sem preço (price/custom_price podem vir como string "25.38")
+    const validos = list.filter((pkg) => {
+        if (pkg.error) return false;
+        const p = pkg.custom_price ?? pkg.price;
+        return p != null && p !== "" && Number(p) > 0;
+    });
 
     if (validos.length === 0 && list.length > 0) {
         console.warn("[Melhor Envio] Todos os pacotes vieram com erro ou sem preço. Amostra:", JSON.stringify(list.slice(0, 2)));
@@ -233,15 +241,17 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
     }
 
     const normalizado: CotacaoFreteNormalizada[] = validos.map((pkg) => {
-        const serviceId = pkg.service ?? pkg.service_id ?? 0;
+        const serviceId = pkg.service ?? pkg.service_id ?? pkg.id ?? 0;
         const company = pkg.company ?? pkg.carrier;
         const precoReais = pkg.custom_price ?? pkg.price ?? 0;
         const prazoDias = pkg.custom_delivery_time ?? pkg.delivery_time ?? 0;
+        const nomeServico =
+            pkg.service_name ?? pkg.name ?? (company?.name ? String(serviceId) : "Frete");
         return {
             provider: "melhor-envio",
             providerServicoId: String(serviceId),
             transportadora: mapCompanyToTransportadora(company?.name ?? ""),
-            nomeServico: pkg.service_name ?? (company?.name ? String(serviceId) : "Frete"),
+            nomeServico: String(nomeServico).replace(/^\./, ""),
             preco: Math.round(Number(precoReais) * 100),
             prazoMinDias: Number(prazoDias) || 0,
             prazoMaxDias: Number(prazoDias) || 0,

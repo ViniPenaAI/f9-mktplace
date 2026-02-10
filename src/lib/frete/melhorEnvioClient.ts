@@ -70,9 +70,10 @@ export interface CotacaoInput {
     insurance?: boolean;
 }
 
-/** Payload do calculate: weight em kg, insurance_value em reais (doc oficial). */
+/** Payload do calculate: weight em kg, insurance_value em reais, name obrigatório (doc oficial). */
 interface MelhorEnvioProductPayload {
     id: string;
+    name: string;
     width: number;
     height: number;
     length: number;
@@ -103,8 +104,10 @@ interface MelhorEnvioCalculateResponse {
 
 function parsePackagesFromCalculate(data: unknown): MelhorEnvioPackage[] {
     if (!data || typeof data !== "object") return [];
-    const r = data as MelhorEnvioCalculateResponse;
+    const r = data as MelhorEnvioCalculateResponse & { data?: MelhorEnvioPackage[]; results?: MelhorEnvioPackage[] };
     if (Array.isArray(r.packages)) return r.packages;
+    if (Array.isArray(r.data)) return r.data;
+    if (Array.isArray(r.results)) return r.results;
     return [];
 }
 
@@ -137,11 +140,12 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
     // Se a rota de cotação informar insurance explicitamente, priorizamos a escolha do cliente.
     const insurance = typeof input.insurance === "boolean" ? input.insurance : defaultInsurance;
 
-    // Doc: weight em kg, insurance_value em reais (obrigatório).
+    // Doc: weight em kg, insurance_value em reais, name obrigatório.
     const products: MelhorEnvioProductPayload[] =
         input.itens.length > 0
             ? input.itens.map((item, idx) => ({
                   id: `produto_${idx + 1}`,
+                  name: `Item ${idx + 1}`,
                   width: item.larguraCm,
                   height: item.alturaCm,
                   length: item.comprimentoCm,
@@ -152,6 +156,7 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
             : [
                   {
                       id: "p1",
+                      name: "Pedido",
                       width: 16,
                       height: 16,
                       length: 16,
@@ -219,6 +224,13 @@ export async function cotarFreteMelhorEnvio(input: CotacaoInput): Promise<Cotaca
 
     // Ignora pacotes com erro (ex.: "Serviço indisponível para esta rota") ou sem preço
     const validos = list.filter((pkg) => !pkg.error && (pkg.custom_price != null || pkg.price != null));
+
+    if (validos.length === 0 && list.length > 0) {
+        console.warn("[Melhor Envio] Todos os pacotes vieram com erro ou sem preço. Amostra:", JSON.stringify(list.slice(0, 2)));
+    }
+    if (list.length === 0) {
+        console.warn("[Melhor Envio] Resposta sem packages ou formato inesperado. Raw keys:", data && typeof data === "object" ? Object.keys(data as object) : [], "sample:", JSON.stringify(data).slice(0, 500));
+    }
 
     const normalizado: CotacaoFreteNormalizada[] = validos.map((pkg) => {
         const serviceId = pkg.service ?? pkg.service_id ?? 0;

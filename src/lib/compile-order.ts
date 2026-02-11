@@ -5,6 +5,7 @@
 
 import { supabaseAdmin } from "@/lib/supabase-server";
 import type { PedidoRow, DadosPedidoJson } from "@/lib/order-types";
+import { calcRotulosPackage } from "@/lib/shipping-rotulos";
 
 const BUCKET = "pedidos";
 
@@ -31,6 +32,50 @@ function buildDadosJson(pedido: PedidoRow): DadosPedidoJson {
         .filter(Boolean)
         .join(", ");
     const spec = (pedido.specs_json || {}) as Record<string, unknown>;
+    const shippingOpt = (pedido.shipping_option_json || null) as
+        | {
+              provider?: string;
+              providerServicoId?: string;
+              transportadora?: string;
+              nomeServico?: string;
+              preco?: number;
+              prazoMinDias?: number;
+              prazoMaxDias?: number;
+          }
+        | null;
+
+    // Estima embalagem com a mesma regra usada para frete (rótulos)
+    let embalagem:
+        | {
+              pesoKg: number;
+              comprimentoCm: number;
+              larguraCm: number;
+              alturaCm: number;
+          }
+        | undefined;
+    try {
+        const qty = (spec.quantity as number) ?? 0;
+        const largura = (spec.width as number) ?? 0;
+        const altura = (spec.height as number) ?? 0;
+        if (qty > 0 && largura > 0 && altura > 0) {
+            const pkg = calcRotulosPackage({
+                quantity: qty,
+                format: (pedido.presentation_type as "cartela" | "unidades") || "cartela",
+                widthMm: largura,
+                heightMm: altura,
+            });
+            embalagem = {
+                pesoKg: pkg.pesoKg,
+                comprimentoCm: pkg.comprimentoCm,
+                larguraCm: pkg.larguraCm,
+                alturaCm: pkg.alturaCm,
+            };
+        }
+    } catch {
+        // Se der erro na estimativa de embalagem, apenas não inclui o bloco
+        embalagem = undefined;
+    }
+
     return {
         ID_PEDIDO: pedido.order_id_mp,
         cliente: {
@@ -57,6 +102,21 @@ function buildDadosJson(pedido: PedidoRow): DadosPedidoJson {
             frete: Number(pedido.shipping_cost || 0),
             total: Number(pedido.total_price || 0),
         },
+        frete: shippingOpt
+            ? {
+                  provider: shippingOpt.provider,
+                  providerServicoId: shippingOpt.providerServicoId,
+                  transportadora: shippingOpt.transportadora,
+                  nomeServico: shippingOpt.nomeServico,
+                  prazoMinDias: shippingOpt.prazoMinDias,
+                  prazoMaxDias: shippingOpt.prazoMaxDias,
+                  precoCentavos: shippingOpt.preco,
+                  embalagem,
+                  // Campos de Melhor Envio (ID etiqueta, tracking, status) podem ser preenchidos depois,
+                  // quando integrarmos a criação automática da etiqueta / leitura da tabela etiquetas_frete.
+                  melhorEnvio: undefined,
+              }
+            : undefined,
         created_at: pedido.created_at,
     };
 }

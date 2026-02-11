@@ -212,6 +212,7 @@ export function Step5Payment() {
                 selectedProduct,
                 totalPrice,
                 shippingCost,
+                shippingOption: selectedShippingOption ?? null,
             };
             fetch("/api/orders/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch((err) => {
                 console.error("[Step5Payment] Erro ao confirmar pedido:", err);

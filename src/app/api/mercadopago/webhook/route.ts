@@ -56,29 +56,30 @@ export async function POST(request: NextRequest) {
             payload = { id: params.get("id"), topic: params.get("topic"), data_id: params.get("data_id") };
         }
 
-        const id = String(payload.id ?? payload.data_id ?? "").trim();
+        // Alguns webhooks (como "order") mandam o ID dentro de data.id (JSON) ou data.id na query.
+        const rawId = String(payload.id ?? payload.data_id ?? "").trim();
         const dataFromBody = payload.data as { id?: string } | undefined;
         const dataIdFromBody = dataFromBody?.id != null ? String(dataFromBody.id) : null;
         const dataIdFromQuery = request.nextUrl.searchParams.get("data.id");
-        const dataId = dataIdFromQuery ?? dataIdFromBody ?? id;
+        const effectiveId = (dataIdFromQuery ?? dataIdFromBody ?? rawId)?.trim() || "";
 
         const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
         const xSignature = request.headers.get("x-signature");
         const xRequestId = request.headers.get("x-request-id");
-        if (secret && !verifyWebhookSignature(secret, xSignature, xRequestId, dataId)) {
+        if (secret && !verifyWebhookSignature(secret, xSignature, xRequestId, effectiveId || null)) {
             console.warn("[Mercado Pago Webhook] Assinatura inválida ou ausente. Notificação ignorada.");
             return NextResponse.json({ received: true }, { status: 200 });
         }
 
         const topic = (payload.topic ?? payload.type) as string;
-        console.log("[Mercado Pago Webhook] Recebido:", { id, topic });
+        console.log("[Mercado Pago Webhook] Recebido:", { id: effectiveId, topic });
 
-        if (!id) {
+        if (!effectiveId) {
             return NextResponse.json({ received: true }, { status: 200 });
         }
 
         if (topic === "order" || topic === "orders" || topic === "merchant_order") {
-            const orderId = id;
+            const orderId = effectiveId;
             const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
             if (accessToken && supabaseAdmin) {
                 try {

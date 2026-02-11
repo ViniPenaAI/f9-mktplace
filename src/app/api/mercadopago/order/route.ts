@@ -140,12 +140,17 @@ export async function POST(request: NextRequest) {
         const orderId = data.id as string;
         const status = data.status as string;
         const statusDetail = data.status_detail as string | undefined;
-        const transactions = data.transactions as { payments?: Array<Record<string, unknown>> } | undefined;
-        const firstPayment = transactions?.payments?.[0];
+        const transactions = data.transactions as { payments?: Array<Record<string, unknown>> } | Array<Record<string, unknown>> | undefined;
+        const paymentsArray: Array<Record<string, unknown>> | undefined = Array.isArray(transactions)
+            ? transactions
+            : transactions?.payments;
+        const firstPayment = paymentsArray?.[0];
         const paymentMethod = firstPayment?.payment_method as Record<string, unknown> | undefined;
-        const pointOfInteraction = firstPayment?.point_of_interaction as
+        const pointFromPayment = firstPayment?.point_of_interaction as
             | { transaction_data?: Record<string, unknown> }
             | undefined;
+        const pointFromRoot = data.point_of_interaction as { transaction_data?: Record<string, unknown> } | undefined;
+        const pointOfInteraction = pointFromPayment ?? pointFromRoot;
         const txData = pointOfInteraction?.transaction_data as
             | {
                   qr_code_base64?: string;
@@ -163,10 +168,18 @@ export async function POST(request: NextRequest) {
             total_paid_amount: data.total_paid_amount,
             // Para PIX e boletos, o código e o QR vêm normalmente em point_of_interaction.transaction_data
             point_of_interaction: pointOfInteraction,
-            qr_code_base64: (paymentMethod?.qr_code_base64 as string | undefined) ?? txData?.qr_code_base64,
-            qr_code: (paymentMethod?.qr_code as string | undefined) ?? txData?.qr_code,
-            ticket_url: (paymentMethod?.ticket_url as string | undefined) ?? txData?.ticket_url,
-            digitable_line: (paymentMethod?.digitable_line as string | undefined) ?? txData?.digitable_line,
+            qr_code_base64:
+                (paymentMethod?.qr_code_base64 as string | undefined) ??
+                txData?.qr_code_base64,
+            qr_code:
+                (paymentMethod?.qr_code as string | undefined) ??
+                txData?.qr_code,
+            ticket_url:
+                (paymentMethod?.ticket_url as string | undefined) ??
+                txData?.ticket_url,
+            digitable_line:
+                (paymentMethod?.digitable_line as string | undefined) ??
+                txData?.digitable_line,
         });
     } catch (err: unknown) {
         console.error("[Mercado Pago Orders] Exceção:", err);

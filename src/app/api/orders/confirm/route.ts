@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import type { OrderConfirmBody } from "@/lib/order-types";
+import { ensureEtiquetaParaPedido } from "@/lib/frete/autoEtiqueta";
 
 export const runtime = "nodejs";
 
@@ -154,6 +155,14 @@ export async function POST(request: NextRequest) {
                 { status: 200 }
             );
         }
+    }
+
+    // Após salvar o pedido (e compilar, se necessário), garante a criação da etiqueta no Melhor Envio,
+    // sem pagamento automático – fica "pending_payment" para você pagar e baixar no painel.
+    try {
+        await ensureEtiquetaParaPedido(pedidoId);
+    } catch (err) {
+        console.error("[orders/confirm] Erro ao gerar etiqueta automática:", err);
     }
 
     return NextResponse.json({ ok: true, pedido_id: pedidoId });

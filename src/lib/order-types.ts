@@ -70,6 +70,26 @@ export interface DadosPedidoJson {
         frete: number;
         total: number;
     };
+    frete?: {
+        provider?: string;
+        providerServicoId?: string;
+        transportadora?: string;
+        nomeServico?: string;
+        prazoMinDias?: number;
+        prazoMaxDias?: number;
+        precoCentavos?: number;
+        embalagem?: {
+            pesoKg: number;
+            comprimentoCm: number;
+            larguraCm: number;
+            alturaCm: number;
+        };
+        melhorEnvio?: {
+            etiquetaId?: string;
+            tracking?: string | null;
+            status?: string;
+        };
+    };
     rastreamento?: Record<string, unknown>;
     created_at: string;
 }

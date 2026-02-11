@@ -143,6 +143,17 @@ export async function POST(request: NextRequest) {
         const transactions = data.transactions as { payments?: Array<Record<string, unknown>> } | undefined;
         const firstPayment = transactions?.payments?.[0];
         const paymentMethod = firstPayment?.payment_method as Record<string, unknown> | undefined;
+        const pointOfInteraction = firstPayment?.point_of_interaction as
+            | { transaction_data?: Record<string, unknown> }
+            | undefined;
+        const txData = pointOfInteraction?.transaction_data as
+            | {
+                  qr_code_base64?: string;
+                  qr_code?: string;
+                  ticket_url?: string;
+                  digitable_line?: string;
+              }
+            | undefined;
 
         return NextResponse.json({
             order_id: orderId,
@@ -150,10 +161,12 @@ export async function POST(request: NextRequest) {
             status_detail: statusDetail,
             total_amount: data.total_amount,
             total_paid_amount: data.total_paid_amount,
-            qr_code_base64: paymentMethod?.qr_code_base64,
-            qr_code: paymentMethod?.qr_code,
-            ticket_url: paymentMethod?.ticket_url,
-            digitable_line: paymentMethod?.digitable_line,
+            // Para PIX e boletos, o código e o QR vêm normalmente em point_of_interaction.transaction_data
+            point_of_interaction: pointOfInteraction,
+            qr_code_base64: (paymentMethod?.qr_code_base64 as string | undefined) ?? txData?.qr_code_base64,
+            qr_code: (paymentMethod?.qr_code as string | undefined) ?? txData?.qr_code,
+            ticket_url: (paymentMethod?.ticket_url as string | undefined) ?? txData?.ticket_url,
+            digitable_line: (paymentMethod?.digitable_line as string | undefined) ?? txData?.digitable_line,
         });
     } catch (err: unknown) {
         console.error("[Mercado Pago Orders] Exceção:", err);

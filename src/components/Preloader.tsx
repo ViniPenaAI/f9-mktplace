@@ -24,7 +24,7 @@ export function Preloader() {
             {/* Container: mesmo eixo; máscaras centralizadas para centro e hexágonos não se sobreporem */}
             <div className="relative w-[300px] h-[300px] md:w-[300px] md:h-[300px] flex items-center justify-center">
                 {/* Tamanho único para alinhar centro da máscara ao centro visual da logo */}
-                <div className="relative w-[220px] h-[220px] md:w-[660px] md:h-[660px]">
+                <div className="relative w-[660px] h-[660px] md:w-[660px] md:h-[660px]">
                     {/* Camada 1: só hexágonos girando — máscara começa depois do centro para não ser “comido” */}
                     <motion.div
                         className="absolute inset-0"
@@ -77,6 +77,7 @@ export function Preloader() {
         </motion.div>
     );
 }
+
 
 
 

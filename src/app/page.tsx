@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
@@ -33,7 +34,9 @@ export default function Home() {
             </p>
           </div>
 
-          <Configurator />
+          <Suspense fallback={<div className="min-h-[200px] flex items-center justify-center text-gray-500">Carregando...</div>}>
+            <Configurator />
+          </Suspense>
         </div>
       </section>
 

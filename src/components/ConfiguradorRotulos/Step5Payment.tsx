@@ -1,6 +1,6 @@
 "use client";
 
-import { useConfiguratorStore } from "@/store/configurator-store";
+import { useConfiguratorStore, type PresentationType } from "@/store/configurator-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -366,7 +366,7 @@ export function Step5Payment() {
                 items: cartItems.map((item) => ({
                     specs: item.specs,
                     artwork: {
-                        presentationType: item.artwork.presentationType,
+                        presentationType: item.artwork.presentationType as PresentationType,
                         selectedDesignUrl: item.artwork.selectedDesignUrl ?? null,
                         enhancedDesignUrl: item.artwork.enhancedDesignUrl ?? null,
                         approvalScale: item.artwork.approvalScale,

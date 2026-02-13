@@ -9,12 +9,18 @@ import { calcRotulosPackage } from "@/lib/shipping-rotulos";
 
 const BUCKET = "pedidos";
 
+/** Opções para pacote com múltiplos itens (carrinho). */
+export interface CompileOrderOptions {
+    totalItems: number;
+    itemIndex: number;
+}
+
 /** Formato para label: 10cm x 8cm. jsPDF usa mm. */
 const ETIQUETA_W_MM = 100;
 const ETIQUETA_H_MM = 80;
 
 /** Gera o conteúdo do Dados_IDpedido.json */
-function buildDadosJson(pedido: PedidoRow): DadosPedidoJson {
+function buildDadosJson(pedido: PedidoRow, opts?: CompileOrderOptions): DadosPedidoJson {
     const c = (pedido.customer_json || {}) as Record<string, string>;
     const nameParts = ((c.name as string) || "").trim().split(/\s+/);
     const nome = nameParts[0] || "";

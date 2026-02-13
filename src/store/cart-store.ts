@@ -10,6 +10,7 @@ interface CartState {
     items: CartItem[];
     addItem: (item: Omit<CartItem, "id">) => void;
     removeItem: (id: string) => void;
+    updateItem: (id: string, patch: Partial<Pick<CartItem, "specs" | "product_label" | "unit_price">>) => void;
     clearCart: () => void;
     setItems: (items: CartItem[]) => void;
 }

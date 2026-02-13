@@ -262,7 +262,11 @@ function arteFileName(pedido: PedidoRow): string {
 }
 
 /** Compila a pasta do pedido e faz upload no Storage. Atualiza package_path e package_generated_at. */
-export async function compileOrder(pedidoId: string, artBase64?: string): Promise<{ ok: boolean; error?: string }> {
+export async function compileOrder(
+    pedidoId: string,
+    artBase64?: string,
+    opts?: CompileOrderOptions
+): Promise<{ ok: boolean; error?: string }> {
     if (!supabaseAdmin) {
         return { ok: false, error: "Supabase não configurado" };
     }

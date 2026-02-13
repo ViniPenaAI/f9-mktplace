@@ -13,7 +13,7 @@ export function CartSync() {
             .then((res) => res.ok ? res.json() : null)
             .then((data: { items?: unknown[] } | null) => {
                 if (data?.items && Array.isArray(data.items)) {
-                    const items: CartItem[] = data.items.map((r: Record<string, unknown>) => ({
+                    const items: CartItem[] = (data.items as Record<string, unknown>[]).map((r) => ({
                         id: String(r.id ?? ""),
                         product_type: r.product_type as CartItem["product_type"],
                         product_label: String(r.product_label ?? ""),
